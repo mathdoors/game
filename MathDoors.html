@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Math Doors</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<style>
+/* ======================================================
+   GLOBAL STYLE
+====================================================== */
+html,body{
+margin:0;
+height:100%;
+background:#000;
+font-family:'Press Start 2P', monospace;
+color:white;
+overflow:hidden;
+}
+
+#title{
+position:absolute;
+top:70px;
+width:100%;
+text-align:center;
+font-size:58px;
+color:#00ffff;
+text-shadow:0 0 15px #00ffff,0 0 40px #00ffff;
+}
+
+/* ======================================================
+   HUD
+====================================================== */
+#lives{
+position:absolute;
+top:25px;
+left:25px;
+display:flex;
+gap:12px;
+}
+
+.heart{
+width:32px;
+height:32px;
+background:red;
+clip-path:polygon(50% 100%,0% 40%,0% 25%,25% 0%,50% 20%,75% 0%,100% 25%,100% 40%);
+box-shadow:0 0 10px red;
+transition:.3s;
+}
+
+.dead{
+filter:grayscale(1);
+opacity:.25;
+transform:scale(.8);
+box-shadow:none;
+}
+
+#score{
+position:absolute;
+top:25px;
+right:25px;
+font-size:24px;
+}
+
+/* ======================================================
+   GRADE SELECTOR (LEFT PANEL)
+====================================================== */
+#gradePanel{
+position:absolute;
+left:70px;
+top:180px;
+display:flex;
+flex-direction:column;
+gap:18px;
+}
+
+.gradeBox{
+padding:18px 22px;
+border:3px solid #555;
+cursor:pointer;
+transition:.2s;
+color:#888;
+}
+
+.gradeBox:hover{
+transform:scale(1.05);
+}
+
+.gradeSelected{
+color:#00ffff;
+border-color:#00ffff;
+box-shadow:0 0 18px #00ffff;
+}
+
+/* ======================================================
+   DOORS
+====================================================== */
+#doors{
+position:relative;
+bottom:0;
+width:100%;
+height:78vh;
+display:flex;
+justify-content:center;
+align-items:flex-end;
+gap:180px;
+perspective:1800px;
+}
+
+.door{
+  min-width:220px;
+}
+
+#doors{
+  flex-wrap:wrap;
+}
+
+.door{
+  width:24vw;
+  max-width:420px;
+  aspect-ratio:420/650;
+  position:relative;
+  cursor:pointer;
+  transition:transform .25s;
+  transform-style:preserve-3d;
+}
+
+#doors{
+  gap:4vw;
+}
+
+.door:not(.open):hover{
+  transform:translateY(-1.5vw) scale(1.05);
+}
+
+.door::before{
+content:"";
+position:absolute;
+inset:0;
+border:14px solid #eee;
+background:#111;
+}
+
+.panel{
+position:absolute;
+inset:10%;
+background:repeating-linear-gradient(90deg,#3b2a14 0,#3b2a14 10px,#4a361b 10px,#4a361b 20px);
+border:6px solid black;
+}
+
+.handle{
+position:absolute;
+right:28px;
+top:50%;
+width:18px;
+height:18px;
+background:gold;
+border-radius:50%;
+transform:translateY(-50%);
+box-shadow:0 0 14px gold;
+}
+
+.label{
+position:absolute;
+bottom:-70px;
+width:100%;
+text-align:center;
+font-size:20px;
+}
+
+.green{box-shadow:0 0 35px #00ff88;}
+.yellow{box-shadow:0 0 35px #ffd000;}
+.red{box-shadow:0 0 35px #ff003c;}
+
+.green .label{color:#00ff88;text-shadow:0 0 15px #00ff88;}
+.yellow .label{color:#ffd000;text-shadow:0 0 15px #ffd000;}
+.red .label{color:#ff003c;text-shadow:0 0 15px #ff003c;}
+
+.open{animation:openDoor .55s forwards ease-in;transform-origin:left center;}
+@keyframes openDoor{0%{transform:rotateY(0);}100%{transform:rotateY(-65deg);} }
+
+/* ======================================================
+   GAME AREA
+====================================================== */
+#gameArea{display:none;text-align:center;margin-top:240px;}
+#question{font-size:38px;margin-bottom:35px;}
+
+input{
+font-family:'Press Start 2P';
+font-size:26px;
+padding:12px;
+width:320px;
+text-align:center;
+background:black;
+color:#00ffcc;
+border:4px solid #00ffcc;
+}
+
+#timer{margin-top:25px;font-size:24px;color:#ffd000;}
+
+/* ======================================================
+   GAME OVER + AD POPUP PLACEHOLDER
+====================================================== */
+#gameOver{display:none;text-align:center;margin-top:220px;font-size:48px;color:#ff003c;}
+
+#restartBtn{
+margin-top:40px;
+font-family:'Press Start 2P';
+font-size:18px;
+padding:14px 28px;
+background:black;
+color:#00ffff;
+border:4px solid #00ffff;
+cursor:pointer;
+}
+
+#adPopup{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.8);
+align-items:center;
+justify-content:center;
+}
+
+#adBox{
+background:#111;
+padding:40px;
+border:4px solid #00ffff;
+text-align:center;
+}
+
+/* ======================================================
+   FLASH TRANSITION
+====================================================== */
+#transitionFlash{
+position:fixed;
+inset:0;
+background:white;
+opacity:0;
+pointer-events:none;
+z-index:999;
+}
+
+.flashActive{animation:screenFlash .25s ease;}
+@keyframes screenFlash{0%{opacity:0;}50%{opacity:1;}100%{opacity:0;}}
+</style>
+
+</head>
+
+<body>
+
+<div id="title">MATH DOORS</div>
+
+<div id="lives">
+<div class="heart"></div>
+<div class="heart"></div>
+<div class="heart"></div>
+</div>
+
+<div id="score">SCORE: 0</div>
+
+<!-- ======================================================
+     GRADE SELECTOR
+     TODO: Add/remove grades here
+====================================================== -->
+
+<div id="gradePanel"></div>
+
+<div id="doors">
+<div class="door green" onclick="startGame(event,'green')"><div class="panel"></div><div class="handle"></div><div class="label">EASY</div></div>
+<div class="door yellow" onclick="startGame(event,'yellow')"><div class="panel"></div><div class="handle"></div><div class="label">MEDIUM</div></div>
+<div class="door red" onclick="startGame(event,'red')"><div class="panel"></div><div class="handle"></div><div class="label">HARD</div></div>
+</div>
+
+<div id="gameArea">
+<div id="question"></div>
+<input id="answer" onkeydown="if(event.key==='Enter')submitAnswer()">
+<div id="timer">TIME: 15</div>
+</div>
+
+<div id="gameOver">
+<div>GAME OVER</div>
+<div id="highScoreText"></div>
+<button id="restartBtn" onclick="restartGame()">RESTART</button>
+</div>
+
+<div id="adPopup">
+<div id="adBox">
+<div>AD PLACEHOLDER</div>
+<button onclick="closeAd()">CONTINUE</button>
+</div>
+</div>
+
+<div id="transitionFlash"></div>
+
+<script>
+/* ======================================================
+   CORE STATE
+====================================================== */
+let gameLocked = false;
+let score = 0;
+let lives = 3;
+let difficulty = null;
+let currentAnswer = "";
+let timer = null;
+let timeLeft = 15;
+let startTime = 0;
+let currentGrade = 1;
+
+const hearts = document.querySelectorAll('.heart');
+
+/* ======================================================
+   UTILITIES
+====================================================== */
+function rand(min, max){
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function pick(arr){
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/* ======================================================
+   SOUND
+====================================================== */
+const ctx = new (window.AudioContext||window.webkitAudioContext)();
+
+function beep(freq,dur,type='square'){
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  o.connect(g);
+  g.connect(ctx.destination);
+  g.gain.value = 0.08;
+  o.start();
+  setTimeout(()=>o.stop(),dur);
+}
+
+/* ======================================================
+   CURRICULUM (GRADE 1 COMPLETE)
+====================================================== */
+/* ======================================================
+   CURRICULUM (GRADE 1 — MATH ONLY)
+====================================================== */
+
+const CURRICULUM = {
+
+/* ===================== GRADE 1 ===================== */
+1:{
+easy:{
+generate(){
+switch(rand(1,5)){
+
+case 1:
+return pick([
+["What shape has 3 sides?","triangle"],
+["What shape is round?","circle"],
+["What shape has 4 equal sides?","square"],
+["What shape has 4 sides, longer shape?","rectangle"]
+]);
+
+case 2:{
+let n = rand(1,10);
+return [`Count: ${"⭐".repeat(n)}`,n];
+}
+
+case 3:{
+let n = rand(0,19);
+return [`What comes after ${n}?`,n+1];
+}
+
+case 4:{
+let n = rand(1,20);
+return [`What comes before ${n}?`,n-1];
+}
+
+case 5:{
+let a=rand(1,20);
+let b=rand(1,20);
+return [`Which is bigger: ${a} or ${b}?`,Math.max(a,b)];
+}
+
+}
+}
+},
+
+medium:{
+generate(){
+switch(rand(1,4)){
+
+case 1:{
+let a=rand(0,10);
+let b=rand(0,10);
+return [`${a} + ${b}`,a+b];
+}
+
+case 2:{
+let a=rand(5,15);
+let b=rand(0,a);
+return [`${a} - ${b}`,a-b];
+}
+
+case 3:{
+let a=rand(1,10);
+let b=rand(1,10);
+return [`__ + ${a} = ${a+b}`,b];
+}
+
+case 4:{
+let n=rand(1,10);
+return [`Double ${n}`,n*2];
+}
+
+}
+}
+},
+
+hard:{
+generate(){
+switch(rand(1,5)){
+
+case 1:{
+let a=rand(10,20);
+let b=rand(1,10);
+return [`${a} + ${b}`,a+b];
+}
+
+case 2:{
+let a=rand(15,30);
+let b=rand(1,10);
+return [`${a} - ${b}`,a-b];
+}
+
+case 3:{
+let a=rand(1,20);
+let b=rand(1,20);
+let ans = a>b?">":a<b?"<":"=";
+return [`${a} __ ${b} (>,<,=)`,ans];
+}
+
+case 4:{
+let tens=rand(1,3);
+let ones=rand(0,9);
+return [`${tens} tens + ${ones} ones`,tens*10+ones];
+}
+
+case 5:{
+let a=rand(5,15);
+let b=rand(1,5);
+return [`${a} apples, eat ${b}. Left?`,a-b];
+}
+
+}
+}
+}
+},
+
+/* ===================== GRADE 2 ===================== */
+2:{
+easy:{
+generate(){
+switch(rand(1,5)){
+
+case 1:{
+let n=rand(1,98);
+return [`What comes after ${n}?`,n+1];
+}
+
+case 2:{
+let n=rand(1,20)*2;
+return [`Count by 2s: ${n}, __`,n+2];
+}
+
+case 3:{
+let n=rand(1,8)*10;
+return [`Count by 10s: ${n}, __`,n+10];
+}
+
+case 4:{
+let a=rand(10,99);
+let b=rand(10,99);
+return [`Which is greater: ${a} or ${b}?`,Math.max(a,b)];
+}
+
+case 5:{
+let tens=rand(1,9);
+let ones=rand(0,9);
+return [`${tens} tens + ${ones} ones`,tens*10+ones];
+}
+
+}
+}
+},
+
+medium:{
+generate(){
+switch(rand(1,5)){
+
+case 1:{
+let a=rand(10,49);
+let b=rand(10,49);
+if((a%10)+(b%10)>=10) b-=b%10;
+return [`${a} + ${b}`,a+b];
+}
+
+case 2:{
+let a=rand(30,99);
+let b=rand(10,29);
+if(a<b)[a,b]=[b,a];
+return [`${a} - ${b}`,a-b];
+}
+
+case 3:{
+let a=rand(10,40);
+let b=rand(10,40);
+return [`__ + ${a} = ${a+b}`,b];
+}
+
+case 4:{
+let n=rand(1,10)*5;
+return [`Count by 5s: ${n}, __`,n+5];
+}
+
+case 5:{
+let a=rand(10,99);
+let b=rand(10,99);
+let ans=a>b?">":a<b?"<":"=";
+return [`${a} __ ${b} (>,<,=)`,ans];
+}
+
+}
+}
+},
+
+hard:{
+generate(){
+switch(rand(1,6)){
+
+case 1:{
+let a=rand(25,75);
+let b=rand(15,45);
+return [`${a} + ${b}`,a+b];
+}
+
+case 2:{
+let a=rand(40,99);
+let b=rand(15,39);
+return [`${a} - ${b}`,a-b];
+}
+
+case 3:{
+let a=rand(20,50);
+let b=rand(5,15);
+return [`You have ${a}, gain ${b}. Total?`,a+b];
+}
+
+case 4:{
+let groups=rand(2,5);
+let each=rand(2,5);
+return [`${groups} groups of ${each}`,groups*each];
+}
+
+case 5:{
+let num=rand(20,99);
+let tens=Math.floor(num/10);
+return [`How many tens in ${num}?`,tens];
+}
+
+case 6:{
+let start=rand(2,10);
+return [`${start}, ${start*2}, ${start*3}, __`,start*4];
+}
+
+}
+}
+}
+},
+
+/* ===================== GRADE 3 ===================== */
+3:{
+easy:{
+generate(){
+switch(rand(1,6)){
+
+case 1:{
+let a=rand(0,5);
+let b=rand(0,5);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let b=rand(1,5);
+let ans=rand(1,5);
+return [`${b*ans} ÷ ${b}`,ans];
+}
+
+case 3:{
+let step=[2,3,4,5][rand(0,3)];
+let start=step*rand(1,5);
+return [`Skip count by ${step}: ${start}, __`,start+step];
+}
+
+case 4:{
+let num=rand(100,999);
+let hundreds=Math.floor(num/100);
+return [`How many hundreds in ${num}?`,hundreds];
+}
+
+case 5:{
+let a=rand(100,999);
+let b=rand(100,999);
+return [`Which is larger: ${a} or ${b}?`,Math.max(a,b)];
+}
+
+case 6:
+return pick([
+["Half of 10?",5],
+["Half of 8?",4],
+["Half of 6?",3]
+]);
+
+}
+}
+},
+
+medium:{
+generate(){
+switch(rand(1,6)){
+
+case 1:{
+let a=rand(2,10);
+let b=rand(2,10);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let b=rand(2,10);
+let ans=rand(2,10);
+return [`${b*ans} ÷ ${b}`,ans];
+}
+
+case 3:{
+let a=rand(100,499);
+let b=rand(100,499);
+return [`${a} + ${b}`,a+b];
+}
+
+case 4:{
+let a=rand(300,999);
+let b=rand(100,299);
+return [`${a} - ${b}`,a-b];
+}
+
+case 5:{
+let rows=rand(2,5);
+let cols=rand(2,5);
+return [`${rows} rows of ${cols}`,rows*cols];
+}
+
+case 6:{
+let side=rand(2,10);
+return [`Perimeter of square side ${side}`,side*4];
+}
+
+}
+}
+},
+
+hard:{
+generate(){
+switch(rand(1,7)){
+
+case 1:{
+let a=rand(6,12);
+let b=rand(6,12);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let a=rand(5,10);
+let b=rand(2,5);
+return [`${a} groups of ${b}`,a*b];
+}
+
+case 3:{
+let groups=rand(3,8);
+let each=rand(3,8);
+return [`${groups*each} shared into ${groups}`,each];
+}
+
+case 4:{
+let num=rand(200,999);
+let tens=Math.floor((num%100)/10);
+return [`Tens digit of ${num}?`,tens];
+}
+
+case 5:
+return pick([
+["One quarter of 8?",2],
+["One quarter of 12?",3],
+["One quarter of 16?",4]
+]);
+
+case 6:{
+let start=rand(2,6);
+return [`${start}, ${start*2}, ${start*3}, ${start*4}, __`,start*5];
+}
+
+case 7:{
+let a=rand(2,5);
+let b=rand(2,10);
+let c=rand(1,10);
+return [`${a} × ${b} + ${c}`,a*b+c];
+}
+
+}
+}
+}
+},
+
+/* ===================== GRADE 4 ===================== */
+4:{
+easy:{
+generate(){
+switch(rand(1,6)){
+
+case 1:{
+let a=rand(2,12);
+let b=rand(2,12);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let b=rand(2,10);
+let ans=rand(2,10);
+return [`${b*ans} ÷ ${b}`,ans];
+}
+
+case 3:{
+let step=[2,3,4,5][rand(0,3)];
+let start=step*rand(1,5);
+return [`Skip count by ${step}: ${start}, __`,start+step];
+}
+
+case 4:{
+let num=rand(100,999);
+let hundreds=Math.floor(num/100);
+return [`Hundreds in ${num}?`,hundreds];
+}
+
+case 5:{
+let side=rand(2,15);
+return [`Perimeter of square (side ${side})`,side*4];
+}
+
+case 6:{
+let a=rand(5,20);
+let b=rand(2,10);
+return [`You have ${a}, get ${b} more. Total?`,a+b];
+}
+
+}
+}
+},
+
+medium:{
+generate(){
+switch(rand(1,6)){
+
+case 1:{
+let a=rand(10,50);
+let b=rand(2,9);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let a=rand(100,499);
+let b=rand(100,499);
+return [`${a} + ${b}`,a+b];
+}
+
+case 3:{
+let a=rand(200,999);
+let b=rand(100,499);
+if(a<b)[a,b]=[b,a];
+return [`${a} - ${b}`,a-b];
+}
+
+case 4:{
+let rows=rand(2,6);
+let cols=rand(2,6);
+return [`${rows} rows of ${cols}`,rows*cols];
+}
+
+case 5:{
+let num=rand(100,999);
+let tens=Math.floor((num%100)/10);
+return [`Tens digit of ${num}?`,tens];
+}
+
+case 6:
+return pick([
+["1/2 of 10?",5],
+["1/2 of 20?",10],
+["1/4 of 12?",3],
+["1/4 of 16?",4]
+]);
+
+}
+}
+},
+
+hard:{
+generate(){
+switch(rand(1,7)){
+
+case 1:{
+let a=rand(6,12);
+let b=rand(6,12);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let a=rand(5,10);
+let b=rand(2,10);
+let c=rand(1,10);
+return [`${a} × ${b} + ${c}`,a*b+c];
+}
+
+case 3:{
+let a=rand(300,999);
+let b=rand(300,999);
+return [`${a} + ${b}`,a+b];
+}
+
+case 4:{
+let a=rand(500,999);
+let b=rand(200,499);
+return [`${a} - ${b}`,a-b];
+}
+
+case 5:{
+let start=rand(2,10);
+return [`${start}, ${start*2}, ${start*3}, ${start*4}, __`,start*5];
+}
+
+case 6:{
+let l=rand(2,12);
+let w=rand(2,12);
+return [`Area of rectangle ${l} × ${w}`,l*w];
+}
+
+case 7:{
+let groups=rand(3,8);
+let each=rand(3,8);
+return [`${groups*each} ÷ ${groups}`,each];
+}
+
+}
+}
+}
+},
+
+/* ===================== GRADE 5 ===================== */
+5:{
+easy:{
+generate(){
+switch(rand(1,6)){
+
+case 1:{
+let a=rand(2,12);
+let b=rand(2,12);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let b=rand(2,10);
+let ans=rand(2,10);
+return [`${b*ans} ÷ ${b}`,ans];
+}
+
+case 3:{
+let a=rand(1,9);
+let b=rand(1,9)/10;
+return [`${a} + ${b.toFixed(1)}`,Number((a+b).toFixed(1))];
+}
+
+case 4:{
+let n=rand(2,5);
+let total=n*rand(2,5);
+return [`1/${n} of ${total}`,total/n];
+}
+
+case 5:{
+let l=rand(2,10);
+let w=rand(2,10);
+return [`Area ${l} × ${w}`,l*w];
+}
+
+case 6:{
+let num=(rand(1,9) + rand(1,9)/10).toFixed(1);
+return [`Tenths in ${num}?`,num.split('.')[1]];
+}
+
+}
+}
+},
+
+medium:{
+generate(){
+switch(rand(1,6)){
+
+case 1:{
+let a=rand(10,50);
+let b=rand(2,9);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let b=rand(3,12);
+let ans=rand(3,12);
+return [`${b*ans} ÷ ${b}`,ans];
+}
+
+case 3:{
+let d=rand(2,10);
+let a=rand(1,d-1);
+let b=rand(1,d-1);
+return [`${a}/${d} + ${b}/${d}`,`${a+b}/${d}`];
+}
+
+case 4:{
+let a=(rand(1,9)+rand(1,9)/10).toFixed(1);
+let b=(rand(1,9)+rand(1,9)/10).toFixed(1);
+return [`${a} + ${b}`,Number((parseFloat(a)+parseFloat(b)).toFixed(1))];
+}
+
+case 5:{
+let l=rand(5,20);
+let w=rand(5,20);
+return [`Perimeter ${l} by ${w}`,2*(l+w)];
+}
+
+case 6:{
+let a=rand(2,10);
+let b=rand(2,10);
+let c=rand(1,10);
+return [`${a} + ${b} × ${c}`,a + b*c];
+}
+
+}
+}
+},
+
+hard:{
+generate(){
+switch(rand(1,7)){
+
+case 1:{
+let a=rand(11,99);
+let b=rand(11,99);
+return [`${a} × ${b}`,a*b];
+}
+
+case 2:{
+let divisor=rand(4,12);
+let quotient=rand(4,12);
+return [`${divisor*quotient} ÷ ${divisor}`,quotient];
+}
+
+case 3:{
+let num=rand(2,10)*2;
+let den=num*2;
+return [`Simplify ${num}/${den}`,`1/2`];
+}
+
+case 4:{
+let n=rand(3,6);
+let total=n*rand(5,10);
+return [`1/${n} of ${total}`,total/n];
+}
+
+case 5:{
+let a=(rand(1,9)/10).toFixed(1);
+let b=rand(2,10);
+return [`${a} × ${b}`,Number((a*b).toFixed(1))];
+}
+
+case 6:{
+let l=rand(2,6);
+let w=rand(2,6);
+let h=rand(2,6);
+return [`Volume ${l}×${w}×${h}`,l*w*h];
+}
+
+case 7:{
+let a=rand(2,10);
+let b=rand(2,10);
+let c=rand(2,10);
+return [`${a} × ${b} + ${c}`,a*b+c];
+}
+
+}
+}
+}
+},
+
+6:{
+  easy:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let a=rand(10,99);
+          let b=rand(10,99);
+          return [`${a} × ${b}`,a*b];
+        }
+
+        case 2:{
+          let b=rand(2,9);
+          let ans=rand(2,9);
+          let r=rand(1,b-1);
+          let total=b*ans+r;
+          return [`${total} ÷ ${b} (r?)`,`${ans} r ${r}`];
+        }
+
+        case 3:{
+          let den=rand(2,5);
+          let num=rand(1,den-1);
+          let total=den*rand(2,10);
+          return [`${num}/${den} of ${total}`, (num*total)/den];
+        }
+
+        case 4:{
+          let a=rand(1,20)/10;
+          let b=rand(1,20)/10;
+          return [`${a.toFixed(1)} + ${b.toFixed(1)}`, Number((a+b).toFixed(2))];
+        }
+
+        case 5:{
+          let n=rand(10,50);
+          let factors=[1,n];
+          if(n%2===0) factors.push(2);
+          if(n%5===0) factors.push(5);
+          return [`Factor of ${n}?`,pick(factors)];
+        }
+
+      }
+    }
+  },
+
+  medium:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let a=rand(2,10);
+          let b=rand(2,10);
+          let c=rand(1,10);
+          return [`${a} + ${b} × ${c}`,a + b*c];
+        }
+
+        case 2:{
+          let num=rand(1,5);
+          let den=num*2;
+          return [`Equivalent of ${num}/${den}?`,`1/2`];
+        }
+
+        case 3:{
+          let whole=rand(1,5);
+          let num=rand(1,5);
+          let den=rand(2,6);
+          return [`${whole} ${num}/${den} improper?`,`${whole*den+num}/${den}`];
+        }
+
+        case 4:{
+          let a=rand(1,5);
+          let b=rand(1,5);
+          return [`Ratio ${a}:${b} as fraction`,`${a}/${b}`];
+        }
+
+        case 5:{
+          let l=rand(5,15);
+          let w=rand(5,15);
+          return [`Area ${l}×${w}`,l*w];
+        }
+
+      }
+    }
+  },
+
+  hard:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let a=rand(10,99)/10;
+          let b=rand(2,9);
+          return [`${a.toFixed(1)} × ${b}`, Number((a*b).toFixed(2))];
+        }
+
+        case 2:{
+          let den=rand(2,10);
+          let a=rand(1,den-1);
+          let b=rand(1,den-1);
+          return [`${a}/${den} + ${b}/${den}`,`${a+b}/${den}`];
+        }
+
+        case 3:{
+          let n=rand(20,200);
+          let p=pick([10,20,25,50]);
+          return [`${p}% of ${n}`,n*p/100];
+        }
+
+        case 4:{
+          let x=rand(1,10);
+          let add=rand(1,10);
+          return [`x + ${add} = ${x+add}`,x];
+        }
+
+        case 5:{
+          let l=rand(2,10);
+          let w=rand(2,10);
+          let h=rand(2,10);
+          return [`Volume ${l}×${w}×${h}`,l*w*h];
+        }
+
+      }
+    }
+  }
+},
+
+7:{
+  easy:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let a=rand(-10,10);
+          let b=rand(-10,10);
+          return [`${a} + ${b}`,a+b];
+        }
+
+        case 2:{
+          let x=rand(1,10);
+          let sub=rand(1,10);
+          return [`x - ${sub} = ${x-sub}`,x];
+        }
+
+        case 3:{
+          let a=rand(1,5);
+          let b=rand(1,5);
+          return [`${a}:${b} as fraction`,`${a}/${b}`];
+        }
+
+        case 4:{
+          let n=rand(10,100);
+          return [`10% of ${n}`,n*0.1];
+        }
+
+        case 5:{
+          let a=rand(1,10);
+          let b=rand(1,10);
+          let c=rand(1,10);
+          return [`Average of ${a},${b},${c}`,(a+b+c)/3];
+        }
+
+      }
+    }
+  },
+
+  medium:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let a=rand(-10,10);
+          let b=rand(-10,10);
+          return [`${a} × ${b}`,a*b];
+        }
+
+        case 2:{
+          let x=rand(1,10);
+          let a=rand(1,10);
+          return [`${a}x = ${a*x}`,x];
+        }
+
+        case 3:{
+          let a=rand(1,5);
+          let b=rand(1,5);
+          let c=rand(1,5);
+          return [`${a}/${b} × ${c}`,Number((a/b*c).toFixed(2))];
+        }
+
+        case 4:{
+          let n=rand(50,200);
+          return [`Increase ${n} by 10%`,n*1.1];
+        }
+
+        case 5:{
+          let b=rand(5,20);
+          let h=rand(5,20);
+          return [`Area triangle`,b*h/2];
+        }
+
+      }
+    }
+  },
+
+  hard:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let a=rand(2,5);
+          let b=rand(1,10);
+          let c=rand(1,10);
+          return [`${a}(${b}+${c})`,a*(b+c)];
+        }
+
+        case 2:{
+          let x=rand(2,10);
+          return [`x > ${x-1}, smallest x?`,x];
+        }
+
+        case 3:{
+          let total=rand(5,20);
+          let success=rand(1,total);
+          return [`${success}/${total} decimal`,Number((success/total).toFixed(2))];
+        }
+
+        case 4:{
+          let d=rand(20,100);
+          let t=rand(1,5);
+          return [`Speed (${d}km in ${t}h)`,d/t];
+        }
+
+        case 5:{
+          let l=rand(2,10);
+          let w=rand(2,10);
+          let h=rand(2,10);
+          return [`Surface area`,2*(l*w+l*h+w*h)];
+        }
+
+      }
+    }
+  }
+},
+
+8:{
+  easy:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let a=rand(1,10);
+          let b=rand(1,10);
+          return [`${a}x + ${b}x`,`${a+b}x`];
+        }
+
+        case 2:{
+          let x=rand(1,10);
+          let a=rand(1,10);
+          return [`x + ${a} = ${x+a}`,x];
+        }
+
+        case 3:{
+          let n=rand(2,12);
+          return [`${n}²`,n*n];
+        }
+
+        case 4:{
+          let start=rand(1,10);
+          return [`Next: ${start},${start+2},${start+4},?`,start+6];
+        }
+
+        case 5:{
+          return [`Point (2,3) y?`,3];
+        }
+
+      }
+    }
+  },
+
+  medium:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let x=rand(1,10);
+          let a=rand(2,5);
+          let b=rand(1,10);
+          return [`${a}x + ${b} = ${a*x+b}`,x];
+        }
+
+        case 2:{
+          return [`Slope (2,2)-(4,6)?`,2];
+        }
+
+        case 3:{
+          return [`Hypotenuse 3,4?`,5];
+        }
+
+        case 4:{
+          return [`10³`,1000];
+        }
+
+        case 5:{
+          let s=rand(1,10);
+          let t=rand(10,20);
+          return [`${s}/${t}`,Number((s/t).toFixed(2))];
+        }
+
+      }
+    }
+  },
+
+  hard:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          return [`x+y=5,x-y=1,x?`,3];
+        }
+
+        case 2:{
+          return [`2²×2³`,32];
+        }
+
+        case 3:{
+          let n=rand(50,200);
+          return [`${n} + 10%`,n*1.1];
+        }
+
+        case 4:{
+          return [`Reflection keeps?`,`shape`];
+        }
+
+        case 5:{
+          return [`Cylinder 2,5 volume?`,Math.round(Math.PI*4*5)];
+        }
+
+      }
+    }
+  }
+},
+
+9:{
+  easy:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          let x=rand(1,10);
+          return [`2x = ${2*x}`,x];
+        }
+
+        case 2:{
+          return [`y=2x+1, x=2`,5];
+        }
+
+        case 3:{
+          return [`3²`,9];
+        }
+
+        case 4:{
+          return [`Triangle sum`,180];
+        }
+
+        case 5:{
+          return [`Distance (0,0)-(3,4)?`,5];
+        }
+
+      }
+    }
+  },
+
+  medium:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          return [`x²+5x+6 factors?`,`(x+2)(x+3)`];
+        }
+
+        case 2:{
+          return [`(x+2)(x+3) expand`,`x²+5x+6`];
+        }
+
+        case 3:{
+          return [`Slope (1,1)-(3,5)?`,2];
+        }
+
+        case 4:{
+          return [`Hypotenuse 5,12?`,13];
+        }
+
+        case 5:{
+          return [`2/5 + 1/5`,3/5];
+        }
+
+      }
+    }
+  },
+
+  hard:{
+    generate(){
+      switch(rand(1,5)){
+
+        case 1:{
+          return [`x²=16,x?`,4];
+        }
+
+        case 2:{
+          return [`x+y=5,x-y=3,x?`,4];
+        }
+
+        case 3:{
+          return [`2³×2²`,32];
+        }
+
+        case 4:{
+          return [`sin(90°)`,1];
+        }
+
+        case 5:{
+          let x=rand(1,5);
+          return [`2x+3=${2*x+3}`,x];
+        }
+
+      }
+    }
+  }
+}
+
+};
+
+
+
+/* ======================================================
+   GRADE SELECTOR
+====================================================== */
+const gradePanel=document.getElementById('gradePanel');
+
+for(let i=1;i<=9;i++){
+  const box=document.createElement('div');
+  box.className='gradeBox'+(i===1?' gradeSelected':'');
+  box.innerText='GRADE '+i;
+  box.onclick=()=>selectGrade(i);
+  gradePanel.appendChild(box);
+}
+
+function selectGrade(g){
+
+if(gameLocked) return;
+
+currentGrade = g;
+
+document.querySelectorAll('.gradeBox')
+.forEach(b=>b.classList.remove('gradeSelected'));
+
+gradePanel.children[g-1]
+.classList.add('gradeSelected');
+
+restartGame();
+}
+
+/* ======================================================
+   GAME FLOW
+====================================================== */
+function startGame(e, level){
+
+if(gameLocked) return;
+gameLocked = true;
+
+ctx.resume();
+
+difficulty = level;
+beep(600,120);
+
+const door = e.currentTarget;
+
+/* FORCE animation reset */
+door.classList.remove('open');
+void door.offsetWidth; // reflow trick
+door.classList.add('open');
+
+setTimeout(()=>{
+screenFlash();
+doors.style.display='none';
+gameArea.style.display='block';
+generateQuestion();
+startTimer();
+answer.focus();
+gameLocked = false;
+},550);
+}
+
+function startTimer(){
+
+clearInterval(timer);
+
+timeLeft = 15;
+startTime = Date.now();
+updateTimer();
+
+timer = setInterval(()=>{
+if(gameLocked) return;
+
+timeLeft--;
+updateTimer();
+
+if(timeLeft <= 0){
+clearInterval(timer);
+loseLife();
+}
+},1000);
+}
+
+function normalize(val){
+return val
+.toString()
+.toLowerCase()
+.replace(/\s+/g,'')       // remove spaces
+.replace(/\.0+$/,'')      // remove trailing .0
+.replace(/^0+/,'0');      // normalize leading zeros
+}
+
+function normalize(val){
+return val
+.toString()
+.toLowerCase()
+.replace(/\s+/g,'')
+.replace('remainder','r')
+.replace(/\.0+$/,'');
+}
+
+function updateTimer(){
+timerEl.innerText='TIME: '+timeLeft;
+}
+
+/* ======================================================
+   QUESTIONS
+====================================================== */
+function generateQuestion(){
+
+const level =
+difficulty==='green'?'easy':
+difficulty==='yellow'?'medium':'hard';
+
+const q = CURRICULUM[currentGrade][level].generate();
+
+question.innerText=q[0];
+currentAnswer=String(q[1]).toLowerCase();
+}
+
+/* ======================================================
+   ANSWERS
+====================================================== */
+function submitAnswer(){
+
+if(gameLocked) return;
+
+const val = normalize(answer.value);
+if(val==="") return;
+
+gameLocked = true;
+
+if(val === normalize(currentAnswer)){
+  correct();
+}else{
+  loseLife();
+}
+}
+
+function correct(){
+
+clearInterval(timer);
+beep(1000,120);
+
+const t = (Date.now() - startTime)/1000;
+
+const base =
+difficulty==='green'?25:
+difficulty==='yellow'?100:250;
+
+const mult = t<6?2:(t<11?1.5:1);
+
+score += Math.floor(base*mult);
+scoreEl.innerText='SCORE: '+score;
+
+setTimeout(()=>{
+  backToDoors();
+  gameLocked = false;
+},250);
+}
+
+function loseLife(){
+
+if(gameLocked) return;
+gameLocked = true;
+
+clearInterval(timer);
+beep(150,400,'sawtooth');
+
+lives--;
+
+if(lives >= 0 && hearts[lives]){
+  hearts[lives].classList.add('dead');
+}
+
+if(lives <= 0){
+  lives = 0; // clamp
+  endGame();
+}else{
+  setTimeout(()=>{
+    backToDoors();
+    gameLocked = false;
+  },250);
+}
+}
+
+/* ======================================================
+   GAME OVER
+====================================================== */
+function endGame(){
+
+const key='highscore_grade_'+currentGrade;
+let best=localStorage.getItem(key)||0;
+
+if(score>best){
+localStorage.setItem(key,score);
+best=score;
+}
+
+highScoreText.innerText=
+'BEST (GRADE '+currentGrade+'): '+best;
+
+gameArea.style.display='none';
+gameOver.style.display='block';
+adPopup.style.display='flex';
+}
+
+function closeAd(){
+adPopup.style.display='none';
+}
+
+/* ======================================================
+   RESET
+====================================================== */
+function restartGame(){
+
+clearInterval(timer);
+
+score=0;
+lives=3;
+difficulty=null;
+
+scoreEl.innerText='SCORE: 0';
+hearts.forEach(h=>h.classList.remove('dead'));
+
+gameOver.style.display='none';
+gameArea.style.display='none';
+doors.style.display='flex';
+
+answer.value='';
+}
+
+/* ======================================================
+   RETURN TO DOORS
+====================================================== */
+function backToDoors(){
+
+gameArea.style.display='none';
+doors.style.display='flex';
+
+document.querySelectorAll('.door')
+.forEach(d=>d.classList.remove('open'));
+
+answer.value='';
+}
+
+/* ======================================================
+   FLASH
+====================================================== */
+const flash=document.getElementById('transitionFlash');
+
+function screenFlash(){
+flash.classList.add('flashActive');
+setTimeout(()=>flash.classList.remove('flashActive'),250);
+}
+
+function generateQuestion(){
+
+const level =
+difficulty==='green'?'easy':
+difficulty==='yellow'?'medium':'hard';
+
+if(!CURRICULUM[currentGrade] || !CURRICULUM[currentGrade][level]){
+  console.error("Curriculum error");
+  return;
+}
+
+const q = CURRICULUM[currentGrade][level].generate();
+
+question.innerText = q[0];
+currentAnswer = String(q[1]);
+}
+
+/* ======================================================
+   ELEMENT REFS
+====================================================== */
+const doors=document.getElementById('doors');
+const question=document.getElementById('question');
+const answer=document.getElementById('answer');
+const timerEl=document.getElementById('timer');
+const scoreEl=document.getElementById('score');
+const gameArea=document.getElementById('gameArea');
+const gameOver=document.getElementById('gameOver');
+const adPopup=document.getElementById('adPopup');
+const highScoreText=document.getElementById('highScoreText');
+</script>
+
+</body>
+</html>
