@@ -64,6 +64,10 @@ right:25px;
 font-size:24px;
 }
 
+body{
+overflow:auto;
+}
+
 /* ======================================================
    GRADE SELECTOR (LEFT PANEL)
 ====================================================== */
@@ -331,7 +335,7 @@ input{
 
 <div id="gameArea">
 <div id="question"></div>
-<input id="answer" onkeydown="if(event.key==='Enter')submitAnswer()">
+<input id="answer">
 <div id="timer">TIME: 15</div>
 </div>
 
@@ -339,13 +343,6 @@ input{
 <div>GAME OVER</div>
 <div id="highScoreText"></div>
 <button id="restartBtn" onclick="restartGame()">RESTART</button>
-</div>
-
-<div id="adPopup">
-<div id="adBox">
-<div>Game Over</div>
-<button onclick="closeAd()">CONTINUE</button>
-</div>
 </div>
 
 <div id="transitionFlash"></div>
@@ -1611,8 +1608,11 @@ function submitAnswer(){
 }
 
 function loseLife(){
-  clearInterval(timer);
-  beep(150,400,'sawtooth');
+
+clearInterval(timer);
+beep(150,400,'sawtooth');
+
+document.getElementById("streak").innerText = "STREAK: 0";
 
 streak = 0;
 multiplier = 1;
@@ -1636,32 +1636,34 @@ multiplier = 1;
 
 function correct(){
 
-streak++;
+  streak++;
 
-if(streak >= 10) multiplier = 3;
-else if(streak >= 5) multiplier = 2;
+  if(streak >= 10) multiplier = 3;
+  else if(streak >= 5) multiplier = 2;
+  else multiplier = 1;
 
-score += 10 * multiplier;
-scoreDisplay.innerText = "SCORE: " + score;
+  clearInterval(timer);
+  beep(1000,120);
 
-clearInterval(timer);
-beep(1000,120);
+  const t = (Date.now() - startTime)/1000;
 
-const t = (Date.now() - startTime)/1000;
+  const base =
+  difficulty==='green'?25:
+  difficulty==='yellow'?100:250;
 
-const base =
-difficulty==='green'?25:
-difficulty==='yellow'?100:250;
+  const speedBonus = t<6?2:(t<11?1.5:1);
 
-const mult = t<6?2:(t<11?1.5:1);
+  const points = Math.floor(base * speedBonus * multiplier);
 
-score += Math.floor(base*mult);
-scoreEl.innerText='SCORE: '+score;
+  score += points;
+  scoreEl.innerText = 'SCORE: ' + score;
 
-setTimeout(()=>{
-  backToDoors();
-  gameLocked = false;
-},250);
+  document.getElementById("streak").innerText = "STREAK: " + streak;
+
+  setTimeout(()=>{
+    backToDoors();
+    gameLocked = false;
+  },250);
 }
 
 /* ======================================================
@@ -1669,24 +1671,21 @@ setTimeout(()=>{
 ====================================================== */
 function endGame(){
 
-const key='highscore_grade_'+currentGrade;
-let best=localStorage.getItem(key)||0;
+  clearInterval(timer);
 
-if(score>best){
-localStorage.setItem(key,score);
-best=score;
-}
+  const key='highscore_grade_'+currentGrade;
+  let best=localStorage.getItem(key)||0;
 
-highScoreText.innerText=
-'BEST (GRADE '+currentGrade+'): '+best;
+  if(score>best){
+    localStorage.setItem(key,score);
+    best=score;
+  }
 
-gameArea.style.display='none';
-gameOver.style.display='block';
-adPopup.style.display='flex';
-}
+  highScoreText.innerText =
+  'BEST (GRADE '+currentGrade+'): '+best;
 
-function closeAd(){
-adPopup.style.display='none';
+  gameArea.style.display='none';
+  gameOver.style.display='block';
 }
 
 /* ======================================================
@@ -1695,6 +1694,10 @@ adPopup.style.display='none';
 function restartGame(){
 
 clearInterval(timer);
+
+streak = 0;
+multiplier = 1;
+document.getElementById("streak").innerText = "STREAK: 0";
 
 score=0;
 lives=3;
