@@ -244,8 +244,62 @@ pointer-events:none;
 z-index:999;
 }
 
+#streak{
+position:absolute;
+top:70px;
+right:25px;
+font-size:18px;
+color:#00ff88;
+}
+
 .flashActive{animation:screenFlash .25s ease;}
 @keyframes screenFlash{0%{opacity:0;}50%{opacity:1;}100%{opacity:0;}}
+
+@media (max-width: 768px){
+
+#title{
+  font-size:28px;
+  top:20px;
+}
+
+#gradePanel{
+  left:10px;
+  top:120px;
+  transform:scale(.8);
+}
+
+#doors{
+  height:65vh;
+  gap:20px;
+}
+
+.door{
+  width:28vw;
+}
+
+#gameArea{
+  margin-top:140px;
+}
+
+#question{
+  font-size:22px;
+}
+
+input{
+  width:220px;
+  font-size:18px;
+}
+
+#score{
+  font-size:16px;
+}
+
+#streak{
+  font-size:14px;
+}
+}
+
+   
 </style>
 
 </head>
@@ -289,17 +343,21 @@ z-index:999;
 
 <div id="adPopup">
 <div id="adBox">
-<div>AD PLACEHOLDER</div>
+<div>Game Over</div>
 <button onclick="closeAd()">CONTINUE</button>
 </div>
 </div>
 
 <div id="transitionFlash"></div>
+   
+<div id="streak">STREAK: 0</div>
 
 <script>
 /* ======================================================
    CORE STATE
 ====================================================== */
+let streak = 0;
+let multiplier = 1;
 let gameLocked = false;
 let score = 0;
 let lives = 3;
@@ -1556,6 +1614,9 @@ function loseLife(){
   clearInterval(timer);
   beep(150,400,'sawtooth');
 
+streak = 0;
+multiplier = 1;
+   
   lives--;
 
   if(lives >= 0 && hearts[lives]){
@@ -1574,6 +1635,14 @@ function loseLife(){
 }
 
 function correct(){
+
+streak++;
+
+if(streak >= 10) multiplier = 3;
+else if(streak >= 5) multiplier = 2;
+
+score += 10 * multiplier;
+scoreDisplay.innerText = "SCORE: " + score;
 
 clearInterval(timer);
 beep(1000,120);
@@ -1645,12 +1714,14 @@ answer.value='';
    RETURN TO DOORS
 ====================================================== */
 function backToDoors(){
-
+   
+gameLocked = false;
 gameArea.style.display='none';
 doors.style.display='flex';
 
-document.querySelectorAll('.door')
-.forEach(d=>d.classList.remove('open'));
+document.querySelectorAll('.door').forEach(d=>{
+  d.classList.remove('open');
+});
 
 answer.value='';
 }
@@ -1682,6 +1753,13 @@ question.innerText = q[0];
 currentAnswer = String(q[1]);
 }
 
+answer.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter"){
+    e.preventDefault();
+    submitAnswer();
+  }
+});
+   
 /* ======================================================
    ELEMENT REFS
 ====================================================== */
@@ -1694,6 +1772,7 @@ const gameArea=document.getElementById('gameArea');
 const gameOver=document.getElementById('gameOver');
 const adPopup=document.getElementById('adPopup');
 const highScoreText=document.getElementById('highScoreText');
+document.getElementById("streak").innerText = "STREAK: " + streak;
 </script>
 
 </body>
